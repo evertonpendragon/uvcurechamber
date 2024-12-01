@@ -1,0 +1,161 @@
+#include <TM1638.h>
+
+// Definição dos pinos do TM1638
+#define TM1638_DIO 8  // Pino de dados
+#define TM1638_CLK 9  // Pino de clock
+#define TM1638_STB 10 // Pino de strobe
+//const int pinRelay = 11; // Pino para controlar o relé
+
+
+// Estados anteriores dos botões
+byte previousButtons = 0;
+
+
+// Criação do objeto TM1638
+TM1638 tm1638(TM1638_DIO, TM1638_CLK, TM1638_STB);
+
+const int pinLed = 11; // Pino para controlar a fita LED (via MOSFET)
+unsigned long previousMillis = 0; // Para medir intervalos de tempo
+int standartCountdownTime = 300; // tempo padrao, ao terminar uma execucao, o timer eh reiniciado com esse valor
+int countdownTime = 300; // Tempo inicial em segundos (pode ser ajustado)
+int remainingTime = countdownTime; // Tempo restante
+bool isTiming = false; // Flag para controlar o temporizador
+
+void ligaLed() {
+  Serial.println("ligaLed");
+  digitalWrite(pinLed, LOW); // Liga a fita LED com brilho máximo
+}
+
+void desligaLed() {
+  
+  Serial.println("desligaLed");
+  digitalWrite(pinLed, HIGH); // Desliga a fita LED
+}
+
+void aumetaTempo() {
+  
+  Serial.println("aumetaTempo");
+  remainingTime += 60; // Aumenta o tempo em 1 minuto
+  countdownTime = remainingTime;
+  displayTime();
+}
+
+void diminuiTempo() {
+  Serial.println("diminuiTempo");
+  if (remainingTime > 60) { // Garante que o tempo não seja negativo
+    remainingTime -= 60; // Diminui 1 minuto
+    countdownTime = remainingTime;
+  }
+  displayTime();
+}
+
+void timerStart() {
+  Serial.println("timerStart");
+  if (!isTiming) {
+    isTiming = true;
+    remainingTime = countdownTime; // Reseta o tempo restante
+    previousMillis = millis(); // Marca o momento inicial
+    ligaLed(); // Liga a fita LED quando o temporizador começa
+  }
+}
+
+void timerCancel() {
+  Serial.println("timerCancel");
+  if (isTiming) {
+    isTiming = false; // Cancela o temporizador
+    desligaLed(); // Desliga a fita LED
+  }
+}
+
+void timerUpdate() {
+  if (isTiming) {
+    unsigned long currentMillis = millis();
+
+    // Verifica se 1 segundo passou
+    if (currentMillis - previousMillis >= 1000) {
+      previousMillis = currentMillis; // Atualiza o último tempo
+      remainingTime--; // Decrementa o tempo restante
+
+      // Atualiza o display com o tempo restante
+      displayTime();
+
+      if (remainingTime <= 0) {
+        isTiming = false; // Finaliza o temporizador
+        desligaLed(); // Desliga a fita LED
+        //displayMessage("DONE"); // Exibe "DONE" no display
+        countdownTime = standartCountdownTime;
+        remainingTime = countdownTime;
+        displayTime();
+      }
+    }
+  }
+}
+
+void displayTime() {
+  //tm1638.setupDisplay(true, 7); 
+  int hours = remainingTime / 3600;
+  int minutes = (remainingTime % 3600) / 60;
+  int seconds = remainingTime % 60;
+
+  char buffer[9];
+  sprintf(buffer, "%02d.%02d.%02d", hours, minutes, seconds);
+  tm1638.setDisplayToString(buffer, 0x00);
+}
+
+void displayMessage(const char* message) {
+  tm1638.setDisplayToString(message, 0x00);
+}
+
+void checkButtons() {
+  byte buttons = tm1638.getButtons();
+
+  // Detecta o botão S1 (Start/Stop)
+  if ((buttons & 0x01) && !(previousButtons & 0x01)) {
+    if (isTiming) {
+      Serial.println("Botao 1");
+      timerCancel();
+    } else {
+      Serial.println("Botao 1");
+      timerStart();
+    }
+  }
+
+  // Detecta o botão S2 (Incrementar)
+  if ((buttons & 0x02) && !(previousButtons & 0x02)) {
+    Serial.println("Botao 2");
+    aumetaTempo();
+  }
+
+  // Detecta o botão S3 (Diminuir)
+  if ((buttons & 0x04) && !(previousButtons & 0x04)) {
+    Serial.println("Botao 3");
+    diminuiTempo();
+  }
+
+  // Atualiza o estado anterior dos botões
+  previousButtons = buttons;
+}
+
+void setup() {
+  Serial.begin(9600);
+
+  pinMode(pinLed, OUTPUT); // Configura o pino do MOSFET para controlar a fita LED
+  desligaLed(); // Garante que a fita LED comece desligada
+
+  tm1638.setupDisplay(true, 7); // Inicializa o display
+  //displayMessage("READY"); // Mostra "READY" no display ao iniciar
+  //delay(1000);
+  displayTime();
+}
+
+void loop() {
+  checkButtons(); // Verifica os botões do TM1638
+  timerUpdate();  // Atualiza o temporizador
+  
+  
+  //tm1638.setupDisplay(true, 7); 
+  //displayMessage("READY");
+  //Serial.print("isTiming: ");
+ // Serial.println(remainingTime);
+
+}
