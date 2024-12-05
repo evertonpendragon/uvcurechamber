@@ -87,6 +87,7 @@ void timerUpdate() {
       displayTime();
 
       if (remainingTime <= 0) {
+        Serial.println("Tempo esgotado");
         isTiming = false; // Finaliza o temporizador
         desligaLed(); // Desliga a fita LED
         //displayMessage("DONE"); // Exibe "DONE" no display
@@ -115,7 +116,7 @@ void displayMessage(const char* message) {
 
 void checkButtons() {
   byte buttons = tm1638.getButtons();
-
+  //Serial.println(buttons);
   // Detecta o botão S1 (Start/Stop)
   if ((buttons & 0x01) && !(previousButtons & 0x01)) {
     if (isTiming) {
@@ -134,15 +135,15 @@ void checkButtons() {
   }
 
   // Detecta o botão S3 (Diminuir)
-  if ((buttons & 0x03) && !(previousButtons & 0x03)) {
+  if ((buttons & 0x04) && !(previousButtons & 0x04)) {
     Serial.println("Botao 3");
     diminuiTempo();
   }
 
-  // Detecta o botão S8 (reboot)
+  // Detecta o botão S4 (reboot)
   if ((buttons & 0x08) && !(previousButtons & 0x08)) {
-    Serial.println("Botao 8");
-    reboot();
+    Serial.println("Botao 4");
+    //reboot();
   }
 
 
@@ -156,7 +157,7 @@ void setup() {
   pinMode(pinLed, OUTPUT); // Configura o pino do MOSFET para controlar a fita LED
   desligaLed(); // Garante que a fita LED comece desligada
 
-  tm1638.setupDisplay(true, 7); // Inicializa o display
+  tm1638.setupDisplay(true, 0); // Inicializa o display, brilho
   //displayMessage("READY"); // Mostra "READY" no display ao iniciar
   //delay(1000);
   displayTime();
