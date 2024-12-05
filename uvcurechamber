@@ -1,4 +1,5 @@
 #include <TM1638.h>
+#include <avr/wdt.h>
 
 // Definição dos pinos do TM1638
 #define TM1638_DIO 8  // Pino de dados
@@ -21,6 +22,12 @@ int countdownTime = 300; // Tempo inicial em segundos (pode ser ajustado)
 int remainingTime = countdownTime; // Tempo restante
 bool isTiming = false; // Flag para controlar o temporizador
 
+
+void reboot(){
+    wdt_enable(WDTO_15MS); // Habilita o watchdog timer com timeout de 15ms
+    while (1); // Aguarde o reset
+
+}
 void ligaLed() {
   Serial.println("ligaLed");
   digitalWrite(pinLed, LOW); // Liga a fita LED com brilho máximo
@@ -127,10 +134,17 @@ void checkButtons() {
   }
 
   // Detecta o botão S3 (Diminuir)
-  if ((buttons & 0x04) && !(previousButtons & 0x04)) {
+  if ((buttons & 0x03) && !(previousButtons & 0x03)) {
     Serial.println("Botao 3");
     diminuiTempo();
   }
+
+  // Detecta o botão S8 (reboot)
+  if ((buttons & 0x08) && !(previousButtons & 0x08)) {
+    Serial.println("Botao 8");
+    reboot();
+  }
+
 
   // Atualiza o estado anterior dos botões
   previousButtons = buttons;
